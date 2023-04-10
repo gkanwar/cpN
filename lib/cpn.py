@@ -47,12 +47,18 @@ def gaussian_soN_matrix(shape, N, *, sigma, rng):
     A = sigma*rng.normal(size=shape+(N,N))
     A = (A - A.swapaxes(-1,-2)) / 2
     return sp.linalg.expm(A)
+def gaussian_suN_matrix(shape, N, *, sigma, rng):
+    A = sigma*(rng.normal(size=shape+(N,N)) + 1j*rng.normal(size=shape+(N,N)))
+    A = (A - A.swapaxes(-1,-2).conj()) / 2
+    return sp.linalg.expm(A)
 def propose_update(z, *, sigma, rng):
     shape, N = z.shape[:-1], z.shape[-1]
-    X = gaussian_soN_matrix(shape, 2*N, sigma=sigma, rng=rng)
-    phi = np.concatenate((np.real(z), np.imag(z)), axis=-1)
-    phip = np.einsum('...ij,...j->...i', X, phi)
-    zp = phip[...,:N] + 1j*phip[...,N:]
+    # X = gaussian_soN_matrix(shape, 2*N, sigma=sigma, rng=rng)
+    X = gaussian_suN_matrix(shape, N, sigma=sigma, rng=rng)
+    # phi = np.concatenate((np.real(z), np.imag(z)), axis=-1)
+    # phip = np.einsum('...ij,...j->...i', X, phi)
+    # zp = phip[...,:N] + 1j*phip[...,N:]
+    zp = np.einsum('...ij,...j->...i', X, z)
     return zp
 
 # Metropolis tools

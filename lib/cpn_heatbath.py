@@ -12,14 +12,18 @@ def metropolis_update(z, *, action, sigma, rng):
     zp = propose_update(z, sigma=sigma, rng=rng)
     u = rng.random(size=latt_shape)
     new_z = np.copy(z)
+    acc = 0.0
     for mask in (mask0, mask1):
         new_z[mask] = zp[mask]
         S = action.local_action(z)
         Sp = action.local_action(new_z)
-        acc = u[mask] < np.exp(-Sp[mask]+S[mask])
-        ind_rej = tuple(np.transpose(np.argwhere(mask)[~acc]))
-        new_z[ind_rej] = z[ind_rej]
-    return new_z
+        rej = (u >= np.exp(-Sp+S)) & mask
+        acc += (1.0 - np.sum(rej) / np.sum(mask)) / 2
+        new_z[rej] = z[rej]
+    return {
+        'cfg': new_z,
+        'acc': acc
+    }
 
 
 def run_metropolis(z0, *, action, sigma, n_iter, n_therm, n_skip, rng):
@@ -27,11 +31,13 @@ def run_metropolis(z0, *, action, sigma, n_iter, n_therm, n_skip, rng):
     S = []
     ens = []
     for i in tqdm.tqdm(range(-n_therm, n_iter)):
-        zp = metropolis_update(z, action=action, sigma=sigma, rng=rng)
-        Si = action.action(zp)
+        res = metropolis_update(z, action=action, sigma=sigma, rng=rng)
+        z = res['cfg']
+        Si = action.action(z)
         if i >= 0 and (i+1) % n_skip == 0:
             S.append(Si)
-            ens.append(zp)
+            ens.append(z)
+            print(f'Step {i+1}: Action {Si:.2f} Acc {100*res["acc"]:.2f}%')
     return dict(
         S=np.array(S),
         ens=np.array(ens)
