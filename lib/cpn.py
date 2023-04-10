@@ -171,3 +171,13 @@ def test_topo_cfg():
 if __name__ == '__main__':
     test_topo_cfg()
 
+def measure_2pt_susc(z):
+    latt_shape = z.shape[:-1]
+    assert len(latt_shape) == 2, 'specialized for 2d'
+    Lx, Lt = latt_shape
+    X2 = 0
+    for x in range(Lx):
+        for t in range(Lt):
+            X2 += np.sum(np.abs(inner(z, np.roll(z, (-x,-t), axis=(0,1))))**2)
+    V = Lx*Lt
+    return X2 / V

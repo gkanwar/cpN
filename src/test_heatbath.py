@@ -28,14 +28,15 @@ def main():
     wflow_params = dict(dt=0.05, n_step=500)
     Q = [np.sum(topological_charge(wflow(z, **wflow_params))) for z in tqdm.tqdm(res['ens'])]
     Q = np.array(Q)
+    X2 = [measure_2pt_susc(z) for z in tqdm.tqdm(res['ens'])]
 
-    print(res['ens'][-1])
-
-    fig, axes = plt.subplots(2,1, tight_layout=True)
+    fig, axes = plt.subplots(3,1, tight_layout=True, figsize=(6,8))
     axes[0].plot(res['S'])
     axes[0].set_ylabel('S')
     axes[1].plot(Q, marker='.')
     axes[1].set_ylabel('Q')
+    axes[2].plot(X2)
+    axes[2].set_ylabel('susc')
     fig.savefig('test_heatbath.pdf')
     
 if __name__ == '__main__':
