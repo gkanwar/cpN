@@ -137,6 +137,8 @@ def _test_deriv(rng):
 if __name__ == '__main__':
     _test_deriv(np.random.default_rng(238749))
 
+### OBSERVABLES
+
 # Geometric definition (see e.g. 1805.11058):
 # q(x) = [
 #   (z^dag(x+1+2) z(x+1)) (z^dag(x+1) z(x)) (z^dag(x) z(x+1+2)) +
@@ -181,3 +183,63 @@ def measure_2pt_susc(z):
             X2 += np.sum(np.abs(inner(z, np.roll(z, (-x,-t), axis=(0,1))))**2)
     V = Lx*Lt
     return X2 / V
+
+
+### HEATBATH
+
+def binary_search(f, val, *, yi, yf, rtol):
+    assert np.all(yf > yi)
+    dy = yf - yi
+    val_i, val_f = f(yi), f(yf)
+    while np.any(val_i > val):
+        yi = np.where(val_i > val, yi-dy, yi)
+        yf = np.where(val_i > val, yi, yf)
+        val_i, val_f = f(yi), f(yf)
+    while np.any(val_f < val):
+        yi = np.where(val_f < val, yf, yi)
+        yf = np.where(val_f < val, yf+dy, yf)
+        val_i, val_f = f(yi), f(yf)
+    y = (yf + yi) / 2
+    val_p = f(y)
+    while np.any(np.abs(val_p - val) > np.abs(val)*rtol):
+        y = (yf + yi) / 2
+        val_p = f(y)
+        yf = np.where(val_p > val, y, yf)
+        yi = np.where(val_p > val, yi, y)
+        val_f = np.where(val_p > val, val_p, val_f)
+        val_i = np.where(val_p > val, val_i, val_p)
+    assert np.all(np.abs(f(y) - val) <= np.abs(val)*rtol)
+    return y
+
+def one_site_direct(Ms, *, rng):
+    w, v = np.linalg.eigh(Ms)
+    assert np.all(w >= 0), 'Ms must be psd'
+    n_cfg, N = w.shape
+    r = np.ones((n_cfg,1))
+    zs = np.zeros((n_cfg, N), dtype=np.complex128)
+    for i in range(N-1):
+        assert np.min(np.abs(w[:,i+1:]-w[:,i:i+1])) > 0, \
+            'M must be non-degenerate FORNOW'
+        beta_1 = w[:,i:i+1]
+        beta_j = w[:,i+1:]
+        k_j = beta_1 - beta_j
+        c_j = np.exp(beta_j * r**2) / k_j
+        denom = beta_j[...,np.newaxis] - beta_j[...,np.newaxis,:]
+        for j in range(N-i-1):
+            denom[...,j,j] = 1.0
+        denom = np.prod(denom, axis=-1)
+        c_j /= denom
+        norm = np.sum(c_j * (np.exp(k_j * r) - 1), axis=-1, keepdims=True)
+        c_j /= norm
+        cdf = lambda x: np.sum(c_j * (np.exp(k_j * x[...,np.newaxis]) - 1), axis=-1)
+        y = rng.random(size=n_cfg)
+        xi = binary_search(cdf, y, yi=np.zeros(n_cfg), yf=r[:,0], rtol=1e-6)
+        print(f'{xi.shape=}')
+        r -= xi[:,np.newaxis]
+        thi = 2*np.pi*rng.random(size=n_cfg)
+        zi = np.sqrt(xi)*np.exp(1j*thi)
+        zs += zi[...,np.newaxis] * v[...,i]
+    thi = 2*np.pi*rng.random(size=n_cfg)
+    zi = np.sqrt(r[:,0]) * np.exp(1j*thi)
+    zs += zi[...,np.newaxis] * v[...,N-1]
+    return zs

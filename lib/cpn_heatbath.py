@@ -6,7 +6,7 @@ import tqdm
 
 
 def metropolis_update(z, *, action, sigma, rng):
-    latt_shape,  N = z.shape[:-1], z.shape[-1]
+    latt_shape, N = z.shape[:-1], z.shape[-1]
     mask0 = get_checkerboard_mask(0, shape=latt_shape)
     mask1 = ~mask0
     zp = propose_update(z, sigma=sigma, rng=rng)
@@ -23,6 +23,17 @@ def metropolis_update(z, *, action, sigma, rng):
     return {
         'cfg': new_z,
         'acc': acc
+    }
+
+def heatbath_update(z, *, action, rng):
+    latt_shape, N = z.shape[:-1], z.shape[-1]
+    mask0 = get_checkerboard_mask(0, shape=latt_shape)
+    mask1 = ~mask0
+    new_z = np.copy(z)
+    for mask in (mask0, mask1):
+        pass
+    return {
+        'cfg': new_z
     }
 
 
