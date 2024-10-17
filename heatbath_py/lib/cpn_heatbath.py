@@ -48,7 +48,7 @@ def run_metropolis(z0, *, action, sigma, n_iter, n_therm, n_skip, rng):
         if i >= 0 and (i+1) % n_skip == 0:
             S.append(Si)
             ens.append(z)
-            print(f'Step {i+1}: Action {Si:.2f} Acc {100*res["acc"]:.2f}%')
+            tqdm.tqdm.write(f'Step {i+1}: Action {Si:.2f} Acc {100*res["acc"]:.2f}%\n')
     return dict(
         S=np.array(S),
         ens=np.array(ens)

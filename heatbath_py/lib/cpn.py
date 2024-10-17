@@ -79,9 +79,7 @@ class CPNQuarticAction:
         S = 0
         for mu in range(len(latt_shape)):
             z_fwd = np.roll(z, -1, axis=mu)
-            z_bwd = np.roll(z, 1, axis=mu)
             S += np.sum(np.abs(inner(z_fwd, z))**2 - 1)
-            S += np.sum(np.abs(inner(z_bwd, z))**2 - 1)
         return -self.beta * S
     ### Sx = -beta sum_y (zx . zy^dag)(zx^dag . zy)
     ###    = -beta sum_y sum_ij zx_i zy^dag_i zx^dag_j zy_j
@@ -158,7 +156,7 @@ def wflow(z, *, dt, n_step):
     for i in range(n_step):
         dz = dt*action.deriv(z)
         z = np.einsum('...ij,...j->...i', sp.linalg.expm(dz), z)
-        S = action.action(z)
+        # S = action.action(z)
     return z
 
 def test_topo_cfg():
