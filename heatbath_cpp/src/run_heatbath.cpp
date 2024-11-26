@@ -8,12 +8,19 @@
 #include "cpn.h"
 #include "metropolis.h"
 
+void write_cfg(std::ostream& os, const cpn::Config& cfg) {
+  for (ull x = 0; x < cfg.geom.vol; ++x) {
+    os.write((char*)&cfg.z[x], sizeof(cfg.z[x]));
+  }
+}
+
 int main(int argc, char** argv) {
-  const LattGeom geom({8, 8});
+  const LattGeom geom({2, 2});
   cpn::Config cfg(geom);
   cpn::init_unit(cfg);
   const double beta = 1.0;
   cpn::SpinAction action(beta);
+  cpn::SpinAction action_b1(1.0);
 
   std::cout << "Initial action: " << action(cfg) << "\n";
 
@@ -46,15 +53,21 @@ int main(int argc, char** argv) {
         - std::norm(zi) - std::norm(zj)) < 1e-8);
     return z;
   };
-  std::ofstream out("u.dat");
-  out << std::setprecision(18);
+  std::ofstream out_u("u.dat");
+  std::ofstream out_ens("ens.dat");
+  out_u << std::setprecision(18);
+  int n_meas = 10;
+  int n_save = 100;
   double acc = 0.0;
   for (int i = 0; i < 100000; ++i) {
     acc += metropolis_update(action, cfg, proposal, rng);
-    if ((i+1) % 10 == 0) {
-      std::cout << "Iter " << i+1 << " energy: " << action(cfg)/geom.vol << "\n";
+    if ((i+1) % n_meas == 0) {
+      std::cout << "Iter " << i+1 << " energy: " << action_b1(cfg)/geom.vol << "\n";
       std::cout << "Acc " << (100*acc/(i+1)) << "%\n";
-      out << action(cfg)/geom.vol << "\n";
+      out_u << action_b1(cfg)/geom.vol << "\n";
+    }
+    if ((i+1) % n_save == 0) {
+      write_cfg(out_ens, cfg);
     }
   }
 }
