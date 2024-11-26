@@ -6,7 +6,7 @@
 extern std::uniform_real_distribution<double> unif_dist;
 
 template<typename Action, typename Config, typename Proposal>
-void metropolis_update(
+double metropolis_update(
     const Action& action, Config& cfg, const Proposal& propose, my_rand& rng) {
   int acc = 0;
   for (ull x = 0; x < cfg.geom.vol; ++x) {
@@ -21,4 +21,5 @@ void metropolis_update(
       cfg.z[x] = z; // reject
     }
   }
+  return acc / (double)cfg.geom.vol;
 }

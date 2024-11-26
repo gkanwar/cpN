@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <random>
 
@@ -8,10 +9,11 @@
 #include "metropolis.h"
 
 int main(int argc, char** argv) {
-  const LattGeom geom({64, 64});
+  const LattGeom geom({8, 8});
   cpn::Config cfg(geom);
   cpn::init_unit(cfg);
-  cpn::SpinAction action(1.0);
+  const double beta = 1.0;
+  cpn::SpinAction action(beta);
 
   std::cout << "Initial action: " << action(cfg) << "\n";
 
@@ -44,10 +46,15 @@ int main(int argc, char** argv) {
         - std::norm(zi) - std::norm(zj)) < 1e-8);
     return z;
   };
-  for (int i = 0; i < 1000; ++i) {
-    metropolis_update(action, cfg, proposal, rng);
+  std::ofstream out("u.dat");
+  out << std::setprecision(18);
+  double acc = 0.0;
+  for (int i = 0; i < 100000; ++i) {
+    acc += metropolis_update(action, cfg, proposal, rng);
     if ((i+1) % 10 == 0) {
-      std::cout << "Iter " << i+1 << " action: " << action(cfg) << "\n";
+      std::cout << "Iter " << i+1 << " energy: " << action(cfg)/geom.vol << "\n";
+      std::cout << "Acc " << (100*acc/(i+1)) << "%\n";
+      out << action(cfg)/geom.vol << "\n";
     }
   }
 }

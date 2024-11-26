@@ -12,11 +12,11 @@ void init_unit(Config& cfg) {
 }
 
 double SpinAction::link_action(const Spin& z, const Spin& zp) const {
-  double z2 = 0.0;
+  cdouble z2 = 0.0;
   for (int i = 0; i < NC; ++i) {
-    z2 += std::norm(z[i] * std::conj(zp[i]));
+    z2 += z[i] * std::conj(zp[i]);
   }
-  return -beta * z2;
+  return beta * (1.0 - std::norm(z2));
 }
 
 double SpinAction::local_action(const Config& cfg, ull x) const {
