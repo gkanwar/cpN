@@ -4,9 +4,14 @@
 #include <iostream>
 #include <random>
 
+#include "args.hxx"
 #include "config.h"
 #include "cpn.h"
 #include "metropolis.h"
+
+#ifndef NC
+#error "Must define Nc in build configuration"
+#endif
 
 void write_cfg(std::ostream& os, const cpn::Config& cfg) {
   for (ull x = 0; x < cfg.geom.vol; ++x) {
@@ -15,10 +20,60 @@ void write_cfg(std::ostream& os, const cpn::Config& cfg) {
 }
 
 int main(int argc, char** argv) {
-  const LattGeom geom({2, 2});
+  args::ArgumentParser parser("Heatbath for CP(N)");
+  args::HelpFlag help(
+      parser, "help", "Display this help menu", {'h', "help"});
+  args::ValueFlag<double> arg_beta(
+      parser, "beta", "Gauge coupling", {'b', "beta"},
+      args::Options::Required);
+  args::ValueFlag<ull> arg_L(
+      parser, "L", "Lattice size", {'L', "L"},
+      args::Options::Required);
+  args::ValueFlag<int> arg_n_iter(
+      parser, "n_iter", "MCMC iterations", {'n', "n_iter"},
+      args::Options::Required);
+  args::ValueFlag<int> arg_n_therm(
+      parser, "n_therm", "MCMC therm steps", {"n_therm"});
+  args::ValueFlag<int> arg_n_meas(
+      parser, "n_meas", "MCMC steps between measurements", {"n_meas"});
+  args::ValueFlag<int> arg_n_save(
+      parser, "n_save", "MCMC steps between writing cfgs", {"n_save"});
+  args::ValueFlag<double> arg_eps(
+      parser, "eps", "Metropolis proposal eps", {"eps"});
+  args::ValueFlag<std::string> arg_prefix(
+      parser, "prefix", "Output prefix", {"prefix"},
+      args::Options::Required);
+  args::ValueFlag<unsigned long long> arg_seed(
+      parser, "seed", "Random seed", {'s', "seed"},
+      args::Options::Required);
+  try {
+    parser.ParseCLI(argc, argv);
+  }
+  catch (args::Help) {
+    std::cout << parser;
+    return 0;
+  }
+  catch (args::ParseError e) {
+    std::cerr << e.what() << "\n";
+    std::cerr << parser;
+    return 1;
+  }
+  catch (args::ValidationError e) {
+    std::cerr << e.what() << "\n";
+    std::cerr << parser;
+    return 1;
+  }
+
+  const int n_iter = args::get(arg_n_iter);
+  const int n_therm = args::get(arg_n_therm);
+  const int n_meas = arg_n_meas ? args::get(arg_n_meas) : 10;
+  const int n_save = arg_n_save ? args::get(arg_n_save) : 100;
+  const std::string prefix = args::get(arg_prefix);
+  const ull L = args::get(arg_L);
+  const LattGeom geom({L, L});
   cpn::Config cfg(geom);
   cpn::init_unit(cfg);
-  const double beta = 1.0;
+  const double beta = args::get(arg_beta);
   cpn::SpinAction action(beta);
   cpn::SpinAction action_b1(1.0);
 
@@ -26,7 +81,7 @@ int main(int argc, char** argv) {
 
   my_rand rng;
 
-  constexpr double EPS = 0.5;
+  const double EPS = arg_eps ? args::get(arg_eps) : 0.5;
   std::uniform_int_distribution<int> nc_dist(0, NC-1);
   std::uniform_real_distribution<double> theta_dist(-EPS, EPS);
   auto proposal = [&](const cpn::Spin& old_z, my_rand& rng) {
@@ -53,21 +108,24 @@ int main(int argc, char** argv) {
         - std::norm(zi) - std::norm(zj)) < 1e-8);
     return z;
   };
-  std::ofstream out_u("u.dat");
-  std::ofstream out_ens("ens.dat");
-  out_u << std::setprecision(18);
-  int n_meas = 10;
-  int n_save = 100;
-  double acc = 0.0;
-  for (int i = 0; i < 100000; ++i) {
-    acc += metropolis_update(action, cfg, proposal, rng);
-    if ((i+1) % n_meas == 0) {
-      std::cout << "Iter " << i+1 << " energy: " << action_b1(cfg)/geom.vol << "\n";
-      std::cout << "Acc " << (100*acc/(i+1)) << "%\n";
-      out_u << action_b1(cfg)/geom.vol << "\n";
-    }
-    if ((i+1) % n_save == 0) {
-      write_cfg(out_ens, cfg);
+
+  {
+    std::ofstream out_u(prefix + "_u.dat");
+    std::ofstream out_ens(prefix + "_ens.dat", std::ios::binary);
+    out_u << std::setprecision(18);
+    double acc = 0.0;
+    for (int i = -n_therm; i < n_iter; ++i) {
+      acc += metropolis_update(action, cfg, proposal, rng);
+      if ((i+1) % n_meas == 0) {
+        std::cout << "Iter " << i+1 << " energy: " << action_b1(cfg)/geom.vol << "\n";
+        std::cout << "Acc " << (100*acc/(i+1+n_therm)) << "%\n";
+        if (i >= 0) {
+          out_u << action_b1(cfg)/geom.vol << "\n";
+        }
+      }
+      if (i >= 0 && (i+1) % n_save == 0) {
+        write_cfg(out_ens, cfg);
+      }
     }
   }
 }
