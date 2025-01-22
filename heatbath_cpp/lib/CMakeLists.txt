@@ -1,4 +1,4 @@
-set(SOURCES cpn.cpp metropolis.cpp)
+set(SOURCES cpn.cpp)
 set(HEADERS cpn.h lattice.h metropolis.h util.h)
 add_library(cpn ${SOURCES})
 target_include_directories(cpn PRIVATE .)

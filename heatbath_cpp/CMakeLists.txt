@@ -10,6 +10,7 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=neoverse-v2 -fopenmp")
 
 add_subdirectory(lib)
 add_subdirectory(src)
