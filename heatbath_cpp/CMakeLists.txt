@@ -10,6 +10,12 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+if(DEFINED OPEMNP)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+  if(CPU EQUALS "GH")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=neoverse-v2")
+  endif()
+endif()
 
 add_subdirectory(lib)
 add_subdirectory(src)

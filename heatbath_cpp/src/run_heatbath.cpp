@@ -97,14 +97,18 @@ int main(int argc, char** argv) {
 
   std::cout << "Initial action: " << action(cfg) << "\n";
 
-  my_rand rng;
+  const int seed = args::get(arg_seed);
+  my_rand_arr rng;
+  for (int i = 0; i < N_BLOCK; ++i) {
+    rng[i].seed(seed+i);
+  }
 
   const double EPS = arg_eps ? args::get(arg_eps) : 0.5;
   std::uniform_int_distribution<int> nc_dist(0, NC-1);
   std::uniform_real_distribution<double> theta_dist(-EPS, EPS);
   auto proposal = [&](const cpn::Spin& old_z, my_rand& rng) {
     cpn::Spin z(old_z);
-    // simple rotation on (ij) pair
+    // U(2) rotation on random (ij) pair
     int i = nc_dist(rng);
     int j = nc_dist(rng);
     if (i == j) return z;
@@ -132,11 +136,16 @@ int main(int argc, char** argv) {
     std::ofstream out_ens(prefix + "_ens.dat", std::ios::binary);
     out_u << std::setprecision(18);
     double acc = 0.0;
+    auto start = std::chrono::high_resolution_clock::now();
     for (int i = -n_therm; i < n_iter; ++i) {
       acc += metropolis_update(action, cfg, proposal, rng);
       if ((i+1) % n_meas == 0) {
         std::cout << "Iter " << i+1 << " energy: " << action_b1(cfg)/geom.vol << "\n";
         std::cout << "Acc " << (100*acc/(i+1+n_therm)) << "%\n";
+        auto now = std::chrono::high_resolution_clock::now();
+        double t = 0.001 * std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+        double exp_t = t * n_iter / (double)(i+1+n_therm);
+        std::cout << "Time " << t << " of " << exp_t << "\n";
         if (i >= 0) {
           out_u << action_b1(cfg)/geom.vol << "\n";
         }
