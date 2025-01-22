@@ -38,6 +38,8 @@ int main(int argc, char** argv) {
       parser, "n_meas", "MCMC steps between measurements", {"n_meas"});
   args::ValueFlag<int> arg_n_save(
       parser, "n_save", "MCMC steps between writing cfgs", {"n_save"});
+  args::ValueFlag<int> arg_n_block(
+      parser, "n_block", "Number of RG blocking steps", {"n_block"});
   args::ValueFlag<double> arg_eps(
       parser, "eps", "Metropolis proposal eps", {"eps"});
   args::ValueFlag<std::string> arg_prefix(
@@ -68,6 +70,7 @@ int main(int argc, char** argv) {
   const int n_therm = args::get(arg_n_therm);
   const int n_meas = arg_n_meas ? args::get(arg_n_meas) : 10;
   const int n_save = arg_n_save ? args::get(arg_n_save) : 100;
+  const int n_block = arg_n_block ? args::get(arg_n_block) : 0;
   const std::string prefix = args::get(arg_prefix);
   const ull L = args::get(arg_L);
   const LattGeom geom({L, L});
@@ -76,6 +79,21 @@ int main(int argc, char** argv) {
   const double beta = args::get(arg_beta);
   cpn::SpinAction action(beta);
   cpn::SpinAction action_b1(1.0);
+
+  std::vector<LattGeom> block_geoms = {geom};
+  for (int i = 0; i < n_block; ++i) {
+    block_geoms.push_back(block_geoms[i].coarsen());
+  }
+
+  auto make_blocked_cfg = [&](const cpn::Config& cfg) {
+    cpn::Config fine = cfg;
+    for (int i = 0; i < n_block; ++i) {
+      cpn::Config coarse(block_geoms[i+1]);
+      coarsen_config(coarse, fine);
+      fine = coarse;
+    }
+    return fine;
+  };
 
   std::cout << "Initial action: " << action(cfg) << "\n";
 
@@ -124,7 +142,8 @@ int main(int argc, char** argv) {
         }
       }
       if (i >= 0 && (i+1) % n_save == 0) {
-        write_cfg(out_ens, cfg);
+        cpn::Config cfg_blocked = make_blocked_cfg(cfg);
+        write_cfg(out_ens, cfg_blocked);
       }
     }
   }

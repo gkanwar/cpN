@@ -35,4 +35,11 @@ class SpinAction : Action {
   double beta;
 };
 
+/// Apply a block-spin coarsening transformation from fine lattice to coarse
+/// lattice with half the extent in all dimensions. Note that the normalization
+/// condition is violated on the fine lattice. One can consider these variables
+/// to be the "bath" for the actual fine variable spins, which can be sampled by
+/// coupling to these non-normalized variables.
+void coarsen_config(Config& coarse, const Config& fine);
+
 }

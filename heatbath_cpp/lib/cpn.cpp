@@ -49,4 +49,27 @@ double SpinAction::operator()(const Config& cfg) const {
   return S;
 }
 
+void coarsen_config(Config& coarse, const Config& fine) {
+  for (ull x = 0; x < coarse.geom.vol; ++x) {
+    for (int i = 0; i < NC; ++i) {
+      coarse.z[x][i] = 0;
+    }
+  }
+  cdouble block_vol = 1;
+  for (int mu = 0; mu < ND; ++mu) {
+    block_vol *= 2;
+  }
+  for (ull x = 0; x < fine.geom.vol; ++x) {
+    std::array<ull, ND> coord_f = fine.geom.coord(x);
+    std::array<ull, ND> coord_c;
+    for (int mu = 0; mu < ND; ++mu) {
+      coord_c[mu] = coord_f[mu] / 2;
+    }
+    // will not be unit-normalized, as described in the docstring
+    for (int i = 0; i < NC; ++i) {
+      coarse.z[coarse.geom.get_idx(coord_c)][i] += fine.z[x][i] / block_vol;
+    }
+  }
+}
+
 }

@@ -30,6 +30,14 @@ struct LattGeom {
     return out;
   }
 
+  ull get_idx(const std::array<ull, ND>& coord) const {
+    ull idx = 0;
+    for (int mu = 0; mu < ND; ++mu) {
+      idx += coord[mu] * strides[mu];
+    }
+    return idx;
+  }
+
   int shift_site_idx(int idx, int diff, int ax) const {
     if (diff < 0) {
       diff += dims[ax];
@@ -45,5 +53,13 @@ struct LattGeom {
   int shift_bwd(int idx, int ax) const {
     return shift_site_idx(idx, -1, ax);
   }
-};
 
+  LattGeom coarsen() const {
+    std::array<ull, ND> coarse_dims;
+    for (int mu = 0; mu < ND; ++mu) {
+      assert(dims[mu] % 2 == 0);
+      coarse_dims[mu] = dims[mu]/2;
+    }
+    return LattGeom(coarse_dims);
+  }
+};
