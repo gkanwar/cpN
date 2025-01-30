@@ -1,6 +1,8 @@
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
 
@@ -145,7 +147,7 @@ int main(int argc, char** argv) {
         auto now = std::chrono::high_resolution_clock::now();
         double t = 0.001 * std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
         double exp_t = t * n_iter / (double)(i+1+n_therm);
-        std::cout << "Time " << t << " of " << exp_t << "\n";
+        std::cout << "Time " << t << " of " << exp_t << "\n" << std::flush;
         if (i >= 0) {
           out_u << action_b1(cfg)/geom.vol << "\n";
         }

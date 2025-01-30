@@ -9,8 +9,54 @@ template<typename Action, typename Config, typename Proposal>
 double metropolis_update(
     const Action& action, Config& cfg, const Proposal& propose, my_rand_arr& rng) {
   std::uniform_real_distribution<double> unif_dist;
-  const unsigned block_size = cfg.geom.vol >= N_BLOCK ? cfg.geom.vol/N_BLOCK : 1;
+  // split volume
+  // const unsigned block_size = cfg.geom.vol >= N_BLOCK ? cfg.geom.vol/N_BLOCK : 1;
+  // split axis 0
+  const unsigned block_size = cfg.geom.dims[0] >= N_BLOCK ? cfg.geom.dims[0]/N_BLOCK : 1;
   int acc = 0;
+
+  // even stripes
+#pragma omp parallel for schedule(static,)
+  for (ull x0 = 0; x0 < cfg.geom.dims[0]; ++x0) {
+    if (x0 % 2 != 0) continue;
+    auto& thread_rng = rng[x0 / block_size];
+    for (ull x1 = 0; x1 < cfg.geom.dims[1]; ++x1) {
+      ull x = cfg.geom.get_idx({x0, x1});
+      // standard MH update
+      const double old_S = action.local_action(cfg, x);
+      const typename Config::Spin_t z = cfg.z[x];
+      cfg.z[x] = propose(z, thread_rng);
+      const double new_S = action.local_action(cfg, x);
+      if (unif_dist(thread_rng) < exp(-new_S + old_S)) {
+        acc++;
+      }
+      else {
+        cfg.z[x] = z;
+      }
+    }
+  }
+
+  // // odd stripes
+  // #pragma omp parallel for
+  // for (ull x0 = 0; x0 < cfg.geom.dims[0]; ++x0) {
+  //   if (x0 % 2 == 0) continue;
+  //   auto& thread_rng = rng[x0 / block_size];
+  //   for (ull x1 = 0; x1 < cfg.geom.dims[1]; ++x1) {
+  //     ull x = cfg.geom.get_idx({x0, x1});
+  //     // standard MH update
+  //     const double old_S = action.local_action(cfg, x);
+  //     const typename Config::Spin_t z = cfg.z[x];
+  //     cfg.z[x] = propose(z, thread_rng);
+  //     const double new_S = action.local_action(cfg, x);
+  //     if (unif_dist(thread_rng) < exp(-new_S + old_S)) {
+  //       acc++;
+  //     }
+  //     else {
+  //       cfg.z[x] = z;
+  //     }
+  //   }
+  // }
+
   // even sites
   #pragma omp parallel for
   for (ull x = 0; x < cfg.geom.vol; ++x) {
@@ -51,5 +97,6 @@ double metropolis_update(
       cfg.z[x] = z;
     }
   }
+
   return acc / (double)cfg.geom.vol;
 }
