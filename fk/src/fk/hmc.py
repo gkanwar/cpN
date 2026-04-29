@@ -26,7 +26,8 @@ def hmc_traj(x, *, theory, n_leap, dtau, ar=True):
     force = lambda x: -theory.grad_action(x)
 
     if not ar:
-        return leapfrog(x, p, n_leap=n_leap, dtau=dtau, force=force)[0]
+        x = leapfrog(x, p, n_leap=n_leap, dtau=dtau, force=force)[0]
+        return dict(x=x)
 
     K = 0.5 * (p**2).flatten(1).sum(1)
     S = theory.action(x)
