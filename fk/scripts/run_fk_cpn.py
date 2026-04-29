@@ -47,12 +47,13 @@ def main():
     axes[2].set_title('Var b')
     data_cfg = axes[0].imshow(np.zeros_like(ens[idx,0]), vmin=-np.pi, vmax=np.pi, cmap='twilight')
     def _plot_cfg():
-        th1 = np.arctan2(ens[idx,1], ens[idx,0])
-        th2 = np.arctan2(ens[idx,3], ens[idx,2])
+        Nc = ens.shape[1]//2
+        th1 = np.arctan2(ens[idx,Nc], ens[idx,0])
+        th2 = np.arctan2(ens[idx,Nc+1], ens[idx,1])
         data_cfg.set_data(wrap(th1 - th2))
         fig.canvas.draw_idle()
-    data_bx = axes[1].imshow(np.zeros_like(ens[idx,0]), cmap='RdBu')
-    data_var_bx = axes[2].imshow(np.zeros_like(ens[idx,0]))
+    data_bx = axes[1].imshow(np.zeros_like(ens[idx,0]), cmap='managua')
+    data_var_bx = axes[2].imshow(np.zeros_like(ens[idx,0]), cmap='pink')
     cb1 = fig.colorbar(data_bx, ax=axes[1])
     cb2 = fig.colorbar(data_var_bx, ax=axes[2])
     def _plot_f(bx_mean, bx_var, n):

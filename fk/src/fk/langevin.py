@@ -40,7 +40,7 @@ def run_fk(x0, *, theory, dSdt, n_iter, dtau, n_accum, plot_f=None, proj=None):
             plot_f(bx_mean, bx_M2/n, n=n)
 
     kwargs = dict(theory=theory, dSdt=dSdt, n_iter=n_iter, dtau=dtau)
-    for i in tqdm.tqdm(range(n_accum)):
+    for i in tqdm.tqdm(range(n_accum), leave=False):
         bx_i = _fk_single(x0, **kwargs)
         if proj is not None:
             bx_i = proj(bx_i)
