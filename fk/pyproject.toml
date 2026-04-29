@@ -1,0 +1,32 @@
+[project]
+name = "feynman-kac"
+version = "0.1.0"
+description = "Feynman Kac on O(N) and CP(N)"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  {name = "Gurtej Kanwar", email="gurtejkanwar@gmail.com"},
+]
+dependencies = [
+  "matplotlib",
+  "numpy",
+  "scipy",
+  "torch",
+  "tqdm",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "slow: long-running numerical validation",
+]
+addopts = ["--import-mode=importlib"]
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools"]
