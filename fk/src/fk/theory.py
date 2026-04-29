@@ -24,10 +24,10 @@ class CPNQuarticTheory:
         for mu in range(Nd):
             x_fwd = torch.roll(x, -1, dims=2+mu)
             h1 = (x * x_fwd).sum(1)**2
-            S -= h1.sum(inds)
+            S = S - h1.sum(inds)
             x_fwd_omega = apply_omega(x_fwd, dim=1)
             h2 = (x * x_fwd_omega).sum(1)**2
-            S -= h2.sum(inds)
+            S = S - h2.sum(inds)
         return S
 
     def action(self, x):
@@ -36,7 +36,7 @@ class CPNQuarticTheory:
     def gradE_auto(self, x):
         f = lambda x: self.action(x[None])[0]
         gx = torch.func.vmap(torch.func.grad(f))(x)
-        gx -= x*(x*gx).sum(1, keepdim=True)
+        gx = gx - x*(x*gx).sum(1, keepdim=True)
         return gx
 
     def gradE(self, x):
@@ -46,17 +46,17 @@ class CPNQuarticTheory:
         for mu in range(Nd):
             # foward
             xp = torch.roll(x, -1, dims=2+mu)
-            gx -= 2*xp*(x*xp).sum(1, keepdim=True)
+            gx = gx - 2*xp*(x*xp).sum(1, keepdim=True)
             # omega * forward
             xp = apply_omega(xp, dim=1)
-            gx -= 2*xp*(x*xp).sum(1, keepdim=True)
+            gx = gx - 2*xp*(x*xp).sum(1, keepdim=True)
             # backward
             xp = torch.roll(x, 1, dims=2+mu)
-            gx -= 2*xp*(x*xp).sum(1, keepdim=True)
+            gx = gx - 2*xp*(x*xp).sum(1, keepdim=True)
             # omega * backward
             xp = apply_omega(xp, dim=1)
-            gx -= 2*xp*(x*xp).sum(1, keepdim=True)
-        gx -= x*(x*gx).sum(1, keepdim=True)
+            gx = gx - 2*xp*(x*xp).sum(1, keepdim=True)
+        gx = gx - x*(x*gx).sum(1, keepdim=True)
         return gx
 
     def grad_action(self, x):

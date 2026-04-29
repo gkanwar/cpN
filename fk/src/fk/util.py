@@ -5,6 +5,9 @@ import torch
 # Global configuration
 ND = 2
 
+def wrap(x):
+    return (x + np.pi) % (2*np.pi) - np.pi
+
 def grab(x):
     return x.detach().cpu().numpy()
 
@@ -58,8 +61,7 @@ def rotate(x, dx, *, dim):
     dxp = cos_a*dx - a_sin_a*x
     return xp, dxp
 
-def apply_omega(x, *, dim):
-    """Given a real representation x of a CP(N) variable, apply Omega matrix."""
+def split_re_im(x, *, dim):
     if dim < 0:
         dim += len(x.shape)
     assert x.shape[dim] % 2 == 0, 'x must have shape (2*Nc) along dim'
@@ -67,7 +69,17 @@ def apply_omega(x, *, dim):
     ind1 = (slice(None),)*dim + (slice(0,Nc),)
     ind2 = (slice(None),)*dim + (slice(Nc,None),)
     x_re, x_im = x[ind1], x[ind2]
+    return x_re, x_im
+
+def apply_omega(x, *, dim):
+    """Given a real representation x of a CP(N) variable, apply Omega matrix."""
+    x_re, x_im = split_re_im(x, dim=dim)
     return torch.cat([-x_im, x_re], dim=dim)
+
+def project_cpn_u1(b, x, *, dim):
+    """Project tangent vector b ortho to the CP(N) u(1) direction of x along dim."""
+    v = apply_omega(x, dim=dim)
+    return project(b, v, dim=dim)
 
 def sample_hot(batch_size, shape, n):
     """
