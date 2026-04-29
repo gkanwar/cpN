@@ -49,36 +49,37 @@ def main():
     n_accum = args.fk_accum
     kwargs = dict(theory=theory, dSdt=dSdt, n_iter=n_iter, dtau=dtau, n_accum=n_accum)
 
+    plot_f = None
+    def _plot_cfg():
+        pass
     if not HEADLESS:
         plt.ion()
-    idx = args.n_skip
-    fig, axes = plt.subplots(1,3, figsize=(12,4), tight_layout=True)
-    axes[0].set_title('Config')
-    axes[1].set_title('Mean b')
-    axes[2].set_title('Var b')
-    data_cfg = axes[0].imshow(np.zeros_like(ens[idx,0]), vmin=-np.pi, vmax=np.pi, cmap='twilight')
-    def _plot_cfg():
-        Nc = ens.shape[1]//2
-        th1 = np.arctan2(ens[idx,Nc], ens[idx,0])
-        th2 = np.arctan2(ens[idx,Nc+1], ens[idx,1])
-        data_cfg.set_data(wrap(th1 - th2))
-        fig.canvas.draw_idle()
-    data_bx = axes[1].imshow(np.zeros_like(ens[idx,0]), cmap='managua')
-    data_var_bx = axes[2].imshow(np.zeros_like(ens[idx,0]), cmap='pink')
-    cb1 = fig.colorbar(data_bx, ax=axes[1])
-    cb2 = fig.colorbar(data_var_bx, ax=axes[2])
-    def _plot_f(bx_mean, bx_var, n):
-        data_bx.set_data(grab(bx_mean)[0,0])
-        data_var_bx.set_data(grab(bx_var)[0,0])
-        vmax = np.max(np.abs(grab(bx_mean)[0,0]))
-        data_bx.set_clim(vmin=-vmax, vmax=vmax)
-        data_var_bx.autoscale()
-        cb1.update_normal(data_bx)
-        cb2.update_normal(data_var_bx)
-        fig.canvas.draw_idle()
-        if not HEADLESS:
+        idx = args.n_skip
+        fig, axes = plt.subplots(1,3, figsize=(12,4), tight_layout=True)
+        axes[0].set_title('Config')
+        axes[1].set_title('Mean b')
+        axes[2].set_title('Var b')
+        data_cfg = axes[0].imshow(np.zeros_like(ens[idx,0]), vmin=-np.pi, vmax=np.pi, cmap='twilight')
+        def _plot_cfg():
+            Nc = ens.shape[1]//2
+            th1 = np.arctan2(ens[idx,Nc], ens[idx,0])
+            th2 = np.arctan2(ens[idx,Nc+1], ens[idx,1])
+            data_cfg.set_data(wrap(th1 - th2))
+            fig.canvas.draw_idle()
+        data_bx = axes[1].imshow(np.zeros_like(ens[idx,0]), cmap='managua')
+        data_var_bx = axes[2].imshow(np.zeros_like(ens[idx,0]), cmap='pink')
+        cb1 = fig.colorbar(data_bx, ax=axes[1])
+        cb2 = fig.colorbar(data_var_bx, ax=axes[2])
+        def plot_f(bx_mean, bx_var, n):
+            data_bx.set_data(grab(bx_mean)[0,0])
+            data_var_bx.set_data(grab(bx_var)[0,0])
+            vmax = np.max(np.abs(grab(bx_mean)[0,0]))
+            data_bx.set_clim(vmin=-vmax, vmax=vmax)
+            data_var_bx.autoscale()
+            cb1.update_normal(data_bx)
+            cb2.update_normal(data_var_bx)
+            fig.canvas.draw_idle()
             plt.pause(0.05)
-    if not HEADLESS:
         plt.pause(0.05)
 
     # evaluate everything!
@@ -89,7 +90,7 @@ def main():
         _plot_cfg()
         x = torch.as_tensor(ens[grab(chunk)]).to(torch.get_default_dtype())
         proj = lambda b: project_cpn_u1(b, x, dim=1)
-        res = run_fk(x, plot_f=_plot_f, proj=proj, **kwargs)
+        res = run_fk(x, plot_f=plot_f, proj=proj, **kwargs)
         bx.append(res['bx'])
         var_bx.append(res['var_bx'])
     bx = np.concatenate(bx)
