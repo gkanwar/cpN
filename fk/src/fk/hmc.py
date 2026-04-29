@@ -1,5 +1,7 @@
 import torch
-from .util import rotate, project, expand_n
+import tqdm.auto as tqdm
+
+from .util import rotate, project, expand_n, grab
 
 def leapfrog(x, p, *, n_leap, dtau, force):
     """Leapfrog on the O(N) manifold with geodesic updates."""
@@ -40,17 +42,23 @@ def hmc_traj(x, *, theory, n_leap, dtau, ar=True):
     x = torch.where(expand_n(acc, len(x.shape)-1), xp, x)
     return dict(x=x, acc=acc, dH=dH)
 
-def run_hmc(x0, *, theory, n_leap, dtau, n_iter, n_therm=0):
+def run_hmc(x0, *, theory, n_leap, dtau, n_iter, n_therm=0, progress=False):
     """Run batched HMC"""
     x = x0.clone()
     acc_tot = 0
 
-    for _ in tqdm.tqdm(range(n_therm)):
+    it = range(n_therm)
+    if progress:
+        it = tqdm.tqdm(it, leave=False)
+    for _ in it:
         res = hmc_traj(x, theory=theory, n_leap=n_leap, dtau=dtau)
         x = res['x']
 
     ens = []
-    for _ in tqdm.tqdm(range(n_iter)):
+    it = range(n_iter)
+    if progress:
+        it = tqdm.tqdm(it, leave=False)
+    for _ in it:
         res = hmc_traj(x, theory=theory, n_leap=n_leap, dtau=dtau)
         ens.append(res['x'].clone())
         acc_tot += grab(res['acc'].mean())
