@@ -2,7 +2,17 @@
 ### incrementally so that we can in principle converge to precise results.
 
 import argparse
+import os
+import matplotlib
 import matplotlib.animation as manim
+
+HEADLESS = (
+    os.environ.get('DISPLAY') is None and
+    os.environ.get('WAYLAND_DISPLAY') is None
+)
+if HEADLESS:
+    matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import numpy as np
 import threading
@@ -39,7 +49,8 @@ def main():
     n_accum = args.fk_accum
     kwargs = dict(theory=theory, dSdt=dSdt, n_iter=n_iter, dtau=dtau, n_accum=n_accum)
 
-    plt.ion()
+    if not HEADLESS:
+        plt.ion()
     idx = args.n_skip
     fig, axes = plt.subplots(1,3, figsize=(12,4), tight_layout=True)
     axes[0].set_title('Config')
@@ -65,8 +76,10 @@ def main():
         cb1.update_normal(data_bx)
         cb2.update_normal(data_var_bx)
         fig.canvas.draw_idle()
+        if not HEADLESS:
+            plt.pause(0.05)
+    if not HEADLESS:
         plt.pause(0.05)
-    plt.pause(0.05)
 
     # evaluate everything!
     bx, var_bx = [], []
