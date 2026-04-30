@@ -100,11 +100,17 @@ def main():
             _hist_phi = np.stack(hist_phi)
             _hist_var_phi = np.stack(hist_var_phi)
             x = np.arange(1, n+1)
+            _hist_phi_err = _hist_var_phi / np.sqrt(x)[:,None]
             axes[1].cla()
             axes[2].cla()
             axes[1].set_title('Mean phi')
             axes[2].set_title('Var phi')
             axes[1].plot(x, _hist_phi)
+            if len(x) >= 4:
+                inds = slice(4, None)
+                for i in range(_hist_phi.shape[-1]):
+                    slice_inds = (inds, i)
+                    axes[1].fill_between(x[inds], (_hist_phi + _hist_phi_err)[slice_inds], (_hist_phi - _hist_phi_err)[slice_inds], ec='none', alpha=0.5)
             axes[2].plot(x, _hist_var_phi)
             axes[1].set_xlim(1, max(1, n))
             axes[2].set_xlim(1, max(1, n))
