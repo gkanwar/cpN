@@ -4,7 +4,6 @@ import torch
 import tqdm.auto as tqdm
 
 from fk.hmc import hmc_traj
-from fk.theory import CPNQuarticTheory
 from fk.util import project_cpn_u1, sample_hot
 
 if torch.cuda.is_available():
@@ -20,8 +19,39 @@ def _flat_norm(x):
     return x.flatten(1).norm(dim=1).mean()
 
 
+class ONTheory:
+    def __init__(self, beta):
+        self.beta = beta
+
+    def energy(self, x):
+        Nd = len(x.shape) - 2
+        S = torch.zeros_like(x.flatten(1)[:,0])
+        inds = tuple(range(1, Nd + 1))
+        for mu in range(Nd):
+            x_fwd = torch.roll(x, -1, dims=2 + mu)
+            S = S - (x * x_fwd).sum(1).sum(inds)
+        return S
+
+    def action(self, x):
+        return self.beta * self.energy(x)
+
+    def gradE(self, x):
+        Nd = len(x.shape) - 2
+        gx = torch.zeros_like(x)
+        for mu in range(Nd):
+            gx = gx - torch.roll(x, -1, dims=2 + mu)
+            gx = gx - torch.roll(x, 1, dims=2 + mu)
+        gx = gx - x * (x * gx).sum(1, keepdim=True)
+        return gx
+
+    def grad_action(self, x):
+        return self.beta * self.gradE(x)
+
+
 def _print_stats(step, x, b):
-    b_proj = project_cpn_u1(b, x, dim=1)
+    # b_proj = project_cpn_u1(b, x, dim=1)
+    ### FORNOW:
+    b_proj = b
     b_norm = _flat_norm(b)
     b_var = _flat_var(b)
     b_proj_norm = _flat_norm(b_proj)
@@ -51,8 +81,8 @@ def main():
     if args.seed is not None:
         torch.manual_seed(args.seed)
 
-    base_theory = CPNQuarticTheory(args.beta)
-    x = sample_hot(1, (args.L, args.L), n=2*args.Nc)
+    base_theory = ONTheory(args.beta)
+    x = sample_hot(1, (args.L, args.L), n=args.Nc)
     b = torch.zeros_like(x)
 
     def had_traj(x, delta):
@@ -88,17 +118,17 @@ def main():
     print('# step b_norm b_var b_proj_norm b_proj_var')
     _print_stats(0, x, b)
     b_norm = []
-    b_proj_norm = []
+    # b_proj_norm = []
     for step in range(1, args.n_traj + 1):
         x, b = torch.func.jvp(had_traj, (x, delta), (b, delta_tangent))
-        b_proj = project_cpn_u1(b, x, dim=1)
+        # b_proj = project_cpn_u1(b, x, dim=1)
         b_norm.append(_flat_norm(b))
-        b_proj_norm.append(_flat_norm(b_proj))
+        # b_proj_norm.append(_flat_norm(b_proj))
         _print_stats(step, x, b)
 
     fig, ax = plt.subplots(1,1)
     ax.plot(b_norm, label='b norm')
-    ax.plot(b_proj_norm, label='b proj norm')
+    # ax.plot(b_proj_norm, label='b proj norm')
     ax.legend()
     ax.set_yscale('log')
     plt.show()
